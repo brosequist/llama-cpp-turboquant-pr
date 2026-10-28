@@ -1847,9 +1847,6 @@ struct common_speculative_impl_draft_mtp : public common_speculative_impl {
 
             auto * mem_dft = llama_get_memory(ctx_dft);
 
-            static const bool mtp_prof = getenv("LLAMA_MTP_PROF") != nullptr;
-            const int64_t t_prof0 = mtp_prof ? ggml_time_us() : 0;
-
             bool ok = true;
             for (int head = 0; head < n_mtp_layers; ++head) {
                 if (chain_heads) {
@@ -1874,10 +1871,6 @@ struct common_speculative_impl_draft_mtp : public common_speculative_impl {
 
             if (chain_heads) {
                 llama_set_nextn_layer_offset(ctx_dft, 0); // restore default for non-draft decodes
-            }
-            if (mtp_prof) {
-                llama_synchronize(ctx_dft);
-                SPC_INF("mtp-prof process n_tokens=%d dft_decode_ms=%.2f\n", n_tokens, (ggml_time_us() - t_prof0) / 1e3);
             }
             if (!ok) {
                 return false;
