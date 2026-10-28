@@ -4297,6 +4297,8 @@ static bool ggml_cuda_should_fuse_rope_set_rows(const ggml_tensor * rope,
     // q8_0 cache: only rope_norm has the quantizing store. A q8_0 block must be one aligned
     // 16-thread group that takes a single path (all rotated or all pass-through), and no thread of
     // a 32-wide warp may have exited early (head dim a multiple of 64) since the scale is shuffled.
+    // n_dims is a multiple of 64 too, so a warp never splits between the rotated and pass-through
+    // branches, which reach the shuffle from different call sites.
     if (set_rows->type == GGML_TYPE_Q8_0) {
         static const bool enabled = getenv("GGML_CUDA_ROPE_Q8_FUSE") == nullptr || atoi(getenv("GGML_CUDA_ROPE_Q8_FUSE")) != 0;
         if (!enabled) {
@@ -4305,7 +4307,7 @@ static bool ggml_cuda_should_fuse_rope_set_rows(const ggml_tensor * rope,
         const int mode   = ((const int32_t *) rope->op_params)[2];
         const int n_dims = ((const int32_t *) rope->op_params)[1];
         if (mode != GGML_ROPE_TYPE_NORMAL || rope->src[0]->type != GGML_TYPE_F32 ||
-            rope->ne[0] % (2*QK8_0) != 0 || n_dims % QK8_0 != 0) {
+            rope->ne[0] % (2*QK8_0) != 0 || n_dims % (2*QK8_0) != 0) {
             return false;
         }
     }
